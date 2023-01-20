@@ -1,0 +1,148 @@
+extras             ::= { /[\u0020\u0009\u000D\u000A]/ ',' comment }
+
+word               ::= identifier
+
+conflicts          ::= {
+                         { identifier float double }
+                         { float double }
+                         { bracketclass }
+                       }
+
+rules:
+  source           ::= _sexpr*
+
+  _sexpr           ::= ref
+                     | deref
+                     | copy
+                     | quote
+                     | quasiquote
+                     | unquotesplicing
+                     | unquote
+                     | list
+                     | staticarray
+                     | array
+                     | dictionary
+                     | $ATOM
+
+  ref              ::= '&' sexpr
+                     | '(' 'ref' sexpr* ')'
+
+  deref            ::= '~' sexpr
+                     | '(' 'deref' sexpr ')'
+
+  copy             ::= '@' sexpr
+                     | '(' 'copy' sexpr ')'
+
+  quote            ::= ['] sexpr
+                     | '(' 'quote' sexpr ')'
+
+  quasiquote       ::= '`' sexpr
+                     | '(' 'quasiquote' sexpr ')'
+
+  unquotesplicing  ::= '%@' sexpr
+                     | '(' 'unquote-splicing' sexpr ')'
+
+  unquote          ::= '%' sexpr
+                     | '(' 'unquote' sexpr ')'
+
+  list             ::= '(' sexpr* ')'
+
+  staticarray      ::= '$' array
+
+  array            ::= '[' sexpr* ']'
+
+  dictionary       ::= '{' sexpr* '}'
+
+  ATOM              := number
+                     | pattern
+                     | rawstring
+                     | string
+                     | char
+                     | bool
+                     | symbol
+
+  symbol           ::= identifier ('.' identifier)*
+
+  bool             ::= 'true'
+                     | 'false'
+
+  identifier       ::= @((($LETTER) | ($DIGIT) | ($VALIDCHAR) | ($HIGHCHAR))+)
+
+  char             ::= @('\\' (($CHARESC) | [^\s]))
+
+  string           ::= @('"' [^"\\]* ('\\' /./ [^"\\]*)* '"')
+
+  rawstring        ::= @('r"' ('"' '"' | [^"])* '"')
+
+  pattern          ::= '#"' internalpattern '"'
+
+  internalpattern  ::= '^'? (patternescaped | bracketclass | capture | ($PATTERNSIMPLE))+ '$'?
+
+  patternescaped   ::= '\\' ('1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'a' | 'c' | 'd' | 'g' | 'l' | 'p' | 's' | 'u' | 'w' | 'x' | 'n' | 'r' | 't' | '[' | ']' | '\\' | '$' | '(' | ')' | '^' | '"' | '*' | '.' | '-')
+                     | '\\b' [^"] [^"]
+                     | '\\f' bracketclass
+
+  bracketclass     ::= '[' '^'? (range | patternescaped | [^\-\u005E\u0024()\[\]\\"]+)* ']'
+
+  range            ::= !(($ALPHANUM) '-' ($ALPHANUM))
+
+  capture          ::= '(' (patternescaped | bracketclass | ($PATTERNSIMPLE))* ')'
+
+  number           ::= float
+                     | floatnoperiod
+                     | byte
+                     | double
+                     | long
+                     | integer
+
+  float            ::= !(($MAYBESIGNED) '.' ($DIGIT)+)
+
+  floatnoperiod    ::= !((($BASES) | ($MAYBESIGNED)) 'f')
+
+  byte             ::= !((($BASES) | ($MAYBESIGNED)) 'b')
+
+  double           ::= !(($MAYBESIGNED) '.' ($DIGIT)+)
+
+  long             ::= !((($BASES) | ($MAYBESIGNED)) 'l')
+
+  integer          ::= !(($BASES) | ($MAYBESIGNED))
+
+  comment          ::= @(';' [^\n]*)
+
+  MAYBESIGNED       := '-'? $(DIGIT)+
+
+  BASES             := $BASE2 | $BASE16
+
+  BASE2             := '0b' ($BIN)+
+
+  BASE16            := '0x' ($HEX)+
+
+  PATTERNSIMPLE     := [^\u005E\u0024()\[\]\\"]
+
+  ALPHANUM          := [0-9a-zA-Z]
+
+  LETTER            := [a-zA-Z]
+
+  DIGIT             := [0-9]
+
+  VALIDCHAR         := [+\-*/?!><=_:\u9580\u9559]
+
+  LOWCHAR           := [\u0000-\u007F]
+
+  HIGHCHAR          := [^\u0000-\u007F]
+
+  CHARESC           := '\\"'
+                     | "space"
+                     | "newline"
+                     | "tab"
+                     | "backspace"
+                     | "return"
+                     | "formfeed"
+                     | ($UNIESC)
+                     | ($LOWCHAR)
+
+  UNIESC            := '\\u' $HEX $HEX $HEX $HEX
+
+  HEX               := [0-9a-fA-F]
+
+  BIN               := [0-1]
